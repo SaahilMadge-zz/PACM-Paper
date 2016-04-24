@@ -1,5 +1,8 @@
 \documentclass[12pt]{article}
-\usepackage{amsmath, amsfonts, fullpage}
+\usepackage{amsmath, amsfonts, fullpage, graphicx}
+\usepackage[colorlinks]{hyperref}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 \begin{document}
 
@@ -16,12 +19,12 @@ defined for the specific type of graph.
 In this paper we present a fast, unsupervised community detection algorithm for
 knowledge graphs. An overview of knowledge graphs is provided in section
 \ref{Knowledge Graph Overview}. These graphs represent information as a set of
-\textit{entity-relation triples} in the form $\langle e_1,\,r,\,e_2 \rangle$ where
-$e_1,e_2$ represent entities and $r$ represents the relation between them. The
-collection of triples is the \textit{knowledge base}. Knowledge graphs can have
-very specialized information (e.g. representing biological processes) or very
-general information. Knowledge graphs are typically represented as one node per
-entity and the relations as edge types between entities.
+\textit{entity-relation triples} in the form $\langle e_1,\,r,\,e_2 \rangle$
+where $e_1,e_2$ represent entities and $r$ represents the relation between them.
+The collection of triples is the \textit{knowledge base}. Knowledge graphs can
+have very specialized information (e.g. representing biological processes) or
+very general information. Knowledge graphs are typically represented as one node
+per entity and the relations as edge types between entities.
 
 Previous work in community detection has focused on very general types of
 graphs. This research is covered in Section \ref{Related Work}. Knowledge graphs
@@ -102,7 +105,32 @@ make it more computationally feasible.
 \section{Knowledge Graph Overview}
 \label{Knowledge Graph Overview}
 
-hello
+A knowledge graph generally refers to a set of \textit{entity-relation triples}.
+These triples take the form $\langle e_1, r, e_2 \rangle$. where $e_1$ and $e_2$
+are entities and $r$ describes the relation between these two entities. Entities
+and relations can be repeated across triples. The total set of triples denotes
+all the knowledge in our ``Knowledge Base''.
+
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=0.7\textwidth,keepaspectratio]{figures/Example_KG.png}
+    \caption{A small example knowledge graph}
+    \label{fig: Example_KG}
+\end{figure}
+
+We can represent these triples as a directed graph, with each entity as a vertex
+and the relations as edge types between them. Figure \ref{fig: Example_KG} shows
+an example of a very small knowledge graph. Note that there is only one node per
+entity. This allows the graph to store multiple pieces of information regarding
+the same entity together, to allow for easy processing by the program while also
+making it simple for humans to understand.
+
+Once a knowledge graph is built, we can pose queries about the graph. For
+example, we can provide two entities $e_1$, $e_2$ and ask which relation $r$
+links the two on the graph. We can also provide an entity $e$ and the relation
+$r$, and ask for which other entity $e'$ do the triples $\langle e,r,e' \rangle$
+or $\langle e',r,e \rangle$ exist on the graph. Put another way, the queries are
+either \textit{link prediction} queries or \textit{entity prediction} queries.
 
 \section{Bipartite Representation}
 \label{Bipartite Representation}
@@ -110,8 +138,15 @@ hello
 We propose converting the knowledge graph into a directed bipartite
 representation to help perform the task of community detection. In this form,
 all entities belong to one \textit{class} while all relations belong to the
-other class. Figure~\ref{fig: 2} shows the graph in Figure~\ref{fig: 1} converted to a
-bipartite representation.
+other class. Figure~\ref{fig: Bipartite_KG} shows the graph in Figure~\ref{fig: Example_KG}
+converted to a bipartite representation.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth,keepaspectratio]{figures/Bipartite_KG.png}
+    \caption{A bipartite representation of the graph in Figure~\ref{fig: Example_KG} }
+    \label{fig: Bipartite_KG}
+\end{figure}
 
 The conversion is done as follows. Consider some triple $\langle e_1,\,r,\,e_2
 \rangle$. There is still exactly one node for each entity, regardless of how
@@ -145,16 +180,24 @@ community. Similarly, relation nodes that have inbound links from entity nodes
 of the same community and outbound links to entity nodes of the same community
 are probably the same type of relation.
 
-Figure~\ref{fig: 3} shows a sample community assignment of the graph in
-Figure~\ref{fig: 2}, where each color represents a different community.
-\textit{Tom Hanks} and \textit{Rita Wilson} both have an outbound edge to the
-gray community, which represents the \textit{has profession} relation. Both also
-have inbound edges from the \textit{has spouse} relation. Since both have
-outbound edges to the same type of relation community and inbound edges from the
-same type of relation community, the algorithm should place these two entities
-in the same community. On the other hand, \textit{Actor} only has inbound links
-from the \textit{has profession} community, so it should be in a separate
-community from \textit{Tom Hanks} and \textit{Rita Wilson}.
+Figure~\ref{fig: Colored_Bipartite_KG} shows a possible community assignment of
+the graph in Figure~\ref{fig: Bipartite_KG}, where each color represents a
+different community. \textit{Tom Hanks} and \textit{Rita Wilson} both have an
+outbound edge to the gray community, which represents the \textit{has
+profession} relation. Both also have inbound edges from the \textit{has spouse}
+relation. Since both have outbound edges to the same type of relation community
+and inbound edges from the same type of relation community, the algorithm should
+place these two entities in the same community. On the other hand,
+\textit{Actor} only has inbound links from the \textit{has profession}
+community, so it should be in a separate community from \textit{Tom Hanks} and
+\textit{Rita Wilson}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth,keepaspectratio]{figures/Colored_Bipartite_KG.png}
+    \caption{A possible community assignment of the graph in Figure~\ref{fig: Bipartite_KG} }
+    \label{fig: Colored_Bipartite_KG}
+\end{figure}
 
 Communities defined this way can be detected for one class independently of the
 other class, allowing for parallelization and therefore decreasing the running
@@ -179,18 +222,40 @@ are untyped, there does not need to be a separate matrix for each type $k$.
 \label{Algorithm Overview}
 
 Section \ref{Bipartite Representation} provided the intuition for our algorithm.
-In this section we formalize the details. Algorithm \ref{alg: alg} shows the
-pseudocode for the algorithm. Let $K_e$ be the set of entity communities and
+In this section we formalize the details. Algorithm \ref{alg: main_alg} shows
+the pseudocode for the algorithm. Let $K_e$ be the set of entity communities and
 $K_r$ the set of relation communities. We specify $|K_e|$ and $|K_r|$
 beforehand. We read in the knowledge graph data and create the bipartite
-representation with $N_e$ the set of entity nodes and $N_r$ the set of relation
-nodes. Note that $|N_r|$ is the number of triples in the set, since we have one
-relation node for every triple. For convenience, let $e$ be the number of entity
-nodes and $a$ the number of relation nodes. The input data also provides us with
-$O$ and $A$, the outbound and inbound adjacency matrices, respectively. Each of
-these is a binary $e\times a$ matrix, where $O_{ij} = 1$ if and only if edge
-there is a directed edge $e_{ij}$ from entity node $i$ to relation node $j$, and
-$I_{ij}$ is the same but for an edge from relation node $j$ to entity node $i$.
+representation with $E$ the set of entity nodes and $R$ the set of relation
+nodes, and $N_e = |E|,\,N_r = |R|$. Note that $N_r$ is the number of triples
+in the set, since we have one relation node for every triple.
+% For convenience,
+% let $e$ be the number of entity nodes and $a$ the number of relation nodes.
+The
+input data also provides us with $O$ and $A$, the outbound and inbound adjacency
+matrices, respectively. Each of these is a binary $N_e\times N_r$ matrix, where
+$O_{ij} = 1$ if and only if edge there is a directed edge $e_{ij}$ from entity
+node $i$ to relation node $j$, and $I_{ij}$ is the same but for an edge from
+relation node $j$ to entity node $i$.
+
+\begin{algorithm}[t!]
+\caption{Community Detection Algorithm}\label{alg: main_alg}
+\begin{algorithmic}[1]
+
+\Function{Detect-Communities}{$E, R, |K_e|, |K_r|, max\_iter, O, I, \epsilon$}
+    \State $state\_pen, l, L, K_e, K_r\gets \Call{Initialize}{E, R, |K_e|, |K_r|, O, I}$
+    \State $iter\gets 0$
+    \While{$iter < max\_iter$ or $state\_pen < \epsilon$}
+        \State $move\_e\gets \Call{Entity\_Penalties}{E, K_e, l, L}$
+        \State $move\_r\gets \Call{Relation\_Penalties}{R, K_r, l, L}$
+        \State $K_e,K_r\gets \Call{Move\_And\_Update}{move\_e, move\_r, K_e, K_r, l, L}$
+        \State $state\_pen\gets \Call{State\_Penalty}{K_e, K_r, l, L}$
+    \EndWhile
+    \State \textbf{return} $K_e, K_r$
+\EndFunction
+
+\end{algorithmic}
+\end{algorithm}
 
 The algorithm is iterative. Each node is assigned a penalty score based on how
 its outbound/inbound edges differ from the other nodes in its community. In each
@@ -208,7 +273,7 @@ nodes is $I^T$, and the inbound matrix is $O^T$.
 
 First consider an entity node $i$ and a relation community $r$. Let
 $l_{ir,outbound}$ be the total number of outbound edges from $i$ to any relation
-node in $r$. We can store these quantities in the $e\times |K_r|$ matrix
+node in $r$. We can store these quantities in the $N_e\times |K_r|$ matrix
 $l_{outbound}$.
 
 $$l_{ir, outbound} = \sum_{j \in r} O_{ij}$$
@@ -242,7 +307,7 @@ $$p(i) = \sum_{r \in K_r} (d_{outbound}(c,r) - l_{ir,outbound})^2 +
 A given assignment of nodes to communities is a \textit{state}. The state penalty
 $P(s)$ is simply the sum of each node penalty.
 
-$$P(s) = \sum_{i \in N_e} p(i) + \sum_{j \in N_r} p(j)$$
+$$P(s) = \sum_{i \in E} p(i) + \sum_{j \in R} p(j)$$
 
 How well the entity communities are formed depends on how accurate the relation
 communities are, and vice versa. The algorithm is iterative so that entity and
@@ -294,30 +359,31 @@ initialization. Then in each iteration, we only have to update these matrices
 for the entity node and relation node that are moved.
 
 Calculating $l_{i, outbound}$ for a node requires summing over all relation
-nodes, so the total time to calculate $l_{outbound}$ is $O(ea)$, which is the
-number of entity nodes times the number of relation nodes. Once the $l$ matrix
-is calculated, the $L_{outbound}$ matrix is simply the sum over each entity node
-(since every node is assigned to exactly one community). Thus calculating
-$L_{outbound}$ takes $O(e)$ time. Our total precomputation is dominated by the
-$O(ea)$ term.
+nodes, so the total time to calculate $l_{outbound}$ is $O(N_eN_r)$, which is
+the number of entity nodes times the number of relation nodes. Once the $l$
+matrix is calculated, the $L_{outbound}$ matrix is simply the sum over each
+entity node (since every node is assigned to exactly one community). Thus
+calculating $L_{outbound}$ takes $O(N_e)$ time (and $O(N_r)$ time when
+calculating for the relation side). Our total precomputation is dominated by the
+$O(N_eN_r)$ term.
 
 In each iteration, calculating the penalty score of an entity node requires summing
 over every relation community, which is $O(|K_r|)$ time. Finding the penalty of
 a relation node takes $O(|K_e|)$ time. Finding the entity node with highest
-penalty therefore takes $O(e|K_r|)$ time, and finding the relation node with
-highest penalty is $O(a|K_e|)$.
+penalty therefore takes $O(N_e|K_r|)$ time, and finding the relation node with
+highest penalty is $O(N_r|K_e|)$.
 
 Finding the optimal community to move to requires calculating the node's penalty
 in each community. This is $O(|K_e||K_r|)$ for both the entity node and relation
 node.
 
 Finally, moving the node requires updating all nodes of the opposite class that
-it is connected to. This takes $O(|N_r|)$ time for the entity node and $O(1)$ time
+it is connected to. This takes $O(N_r)$ time for the entity node and $O(1)$ time
 for the relation node, since each relation node has only 2 edges.
 
 The total time per iteration is dominated by finding the nodes with highest
-penalty. Therefore we spend $$O(|N_e||K_r| + |N_r||K_e|)$$ time per iteration.
-The total number of nodes is $|N_e| + |N_r|$, and $|K_e| << |N_e|,\,|K_r| << |N_r|$.
+penalty. Therefore we spend $$O(N_e|K_r| + N_r|K_e|)$$ time per iteration.
+The total number of nodes is $N_e + N_r$, and $|K_e| << N_e,\,|K_r| << N_r$.
 The algorithm is not quite linear but almost linear per iteration, which means
 that it is a fast algorithm relative to other community detection algorithms.
 Lower runtime allows the algorithm to scale up to very large datasets.
@@ -349,11 +415,36 @@ triples is to assign all events to one community and all dates to the other. We
 expect the algorithm to do this as well, because events will have only outbound
 edges to the single relation community and dates will have only inbound edges.
 
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=0.7\textwidth,keepaspectratio]{figures/event_example.png}
+    \caption{An optimal community assignment for two triples from the Events set}
+    \label{fig: events}
+\end{figure}
+
 Table~\ref{tab: events} shows the result of running the algorithm on this small
 dataset. The algorithm does perfectly split the 8 triples, with only dates in
 Community 1 and only events in Community 2. That the algorithm is able to find
 the optimal partition here indicates it could yield promising results on more
 complicated datsets.
+
+\begin{table}[b]
+    \begin{tabular}{|c|c|}
+        \hline
+        Community 1 & Community 2 \\ \hline
+        2007 & liquidity\_crisis \\
+        2005 & operation\_iraqi\_freedom \\
+        june\_1941 & operation\_barbarossa \\
+        december\_1941 & pearl\_harbor \\
+        june\_1967 & six\_day\_war \\
+        1812 & revolutionary\_war \\
+        december\_1941 & world\_war\_ii \\
+        2007 & troop\_surge \\
+        \hline
+    \end{tabular}
+    \caption{The algorithm's community assignements for entity nodes in eight Event triples}
+    \label{tab: events}
+\end{table}
 
 The second dataset contains 3248 triples (298 distinct entities) in four broad
 areas. The first is the Events set used in the previous experiment. The second
@@ -370,6 +461,13 @@ way to assign communities is to assign them by the set from which the node
 originated. On the entity side, one community should contain all the nodes from
 the Event set, one should contain all from the Language set, and so on. The same
 should be true of the relation communities.
+
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=0.7\textwidth,keepaspectratio]{figures/total_dataset_graph.png}
+    \caption{An optimal community assignment for four triples in the large dataset}
+    \label{fig: total}
+\end{figure}
 
 As discussed in Section \ref{Introduction}, community detection algorithms are
 very tough to evaluate because there is not necessarily one assignment that is
@@ -390,11 +488,37 @@ than others. For example, nodes from the Events set are mostly in Communities
 predominantly in Communities 1 and 3. However, for the most part the algorithm
 results are suboptimal.
 
+\begin{table}[]
+    \begin{tabular}{|c||c|c|c|c|}
+        \hline
+        & Community 1 & Community 2 & Community 3 & Community 4 \\ \hline
+        Language & 6 & 5 & 10 & 6 \\ \hline
+        Events & 12 & 12 & 3 & 6 \\ \hline
+        People & 42 & 33 & 42 & 37 \\ \hline
+        Sports & 22 & 26 & 21 & 15 \\ \hline
+    \end{tabular}
+    \label{tab: totalE}
+    \caption{Table of Entity Communities in the large dataset}
+\end{table}
+
 Table~\ref{tab: totalR} shows the distribution of relation nodes in each
 relation community, along with the set from which each node originated. The
 results are about the same as with the entity communities. While the Events set
 is mostly in Communities 1 and 3, for the most part the communities do not
 match the optimal assignment.
+
+\begin{table}[]
+    \begin{tabular}{|c||c|c|c|c|}
+        \hline
+        & Community 1 & Community 2 & Community 3 & Community 4 \\ \hline
+        Language & 86 & 84 & 88 & 78 \\ \hline
+        Events & 76 & 65 & 76  & 71 \\ \hline
+        People & 441 & 399 & 395 & 413 \\ \hline
+        Sports & 252 & 263 & 215 & 246 \\ \hline
+    \end{tabular}
+    \label{tab: totalR}
+    \caption{Table of Relation Communities in the large dataset}
+\end{table}
 
 \subsection{Discussion}
 \label{Discussion}
@@ -413,12 +537,12 @@ assign nodes to communities more accurately. In a denser knowledge graph each
 entity node appears in many triples, which allows the algorithm to better
 categorize each node based on the types of relations it is involved with. On the
 other hand, a smaller and sparser graph can suffer from noise. For example, in
-Figure~\ref{fig: 3} if Rita Wilson did not have a \textit{has spouse} relation
-and only the \textit{has profession} relation, then that node only has two edges
-in common with the Tom Hanks node. The fewer edges in common it has with another
-node, the less likely it is that the algorithm will put those two nodes in the
-same community. The algorithm takes a longer time to converge on dense graphs,
-however.
+Figure~\ref{fig: Colored_Bipartite_KG} if Rita Wilson did not have a \textit{has
+spouse} relation and only the \textit{has profession} relation, then that node
+only has two edges in common with the Tom Hanks node. The fewer edges in common
+it has with another node, the less likely it is that the algorithm will put
+those two nodes in the same community. The algorithm takes a longer time to
+converge on dense graphs, however.
 
 The number of communities specified can also greatly affect the algorithm's
 accuracy. As discussed earlier, there is not necessarily a clear reason why
