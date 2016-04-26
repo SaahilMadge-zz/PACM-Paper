@@ -1,14 +1,39 @@
 \documentclass[12pt]{article}
-\usepackage{amsmath, amsfonts, fullpage, graphicx, algorithm, algpseudocode, titlesec}
-\usepackage[colorlinks]{hyperref}
+\usepackage{amsmath, amsfonts, fullpage, graphicx, algorithm, algpseudocode,
+titlesec, hyperref, setspace}
+% \usepackage[colorlinks]{hyperref}
 % \newcommand{\sectionbreak}{\clearpage}
+\hypersetup{
+    % colorlinks=true,
+    % linkcolor=red,
+    % citecolor=blue,
+    % colorlinks=false,
+    linkbordercolor={1 0 0},
+    citebordercolor={0 1 0},
+    pdfborder={0 0 1}
+}
 
 \begin{document}
 
 \title{Fast Community Detection in Knowledge Graphs}
-\author{Saahil Madge\\ Adviser: Professor Emmanuel Abbe\\ Program in Applied \& Computational Mathematics}
+\author{Saahil Madge\\ Advisor: Professor Emmanuel Abbe\\ Program in Applied \& Computational Mathematics}
 \date{}
 \maketitle
+
+\begin{abstract}
+
+    Knowledge graphs represent information as a directed graph. The ability to
+    detect communities in these graphs is crucial to understanding the structure
+    of the graph and the underlying information. Here we present a fast,
+    unsupervised algorithm to perform community detection on knowledge graphs.
+    We first convert the graph to a bipartite representation, and iteratively
+    improve the community assignments. We also present an analysis of the
+    runtime of the algorithm. We demonstrate the algorithm's performance on the
+    NELL dataset.
+
+\end{abstract}
+
+\doublespacing
 
 \section{Introduction}
 \label{Introduction}
@@ -23,23 +48,23 @@ defined for the specific type of graph.
 In this paper we present a fast, unsupervised community detection algorithm for
 knowledge graphs. An overview of knowledge graphs is provided in section
 \ref{Knowledge Graph Overview}. These graphs represent information as a set of
-\textit{entity-relation triples} in the form $\langle e_1,\,r,\,e_2 \rangle$
-where $e_1,e_2$ represent entities and $r$ represents the relation between them.
-The collection of triples is the \textit{knowledge base}. Knowledge graphs can
-have very specialized information (e.g. representing biological processes) or
-very general information. Knowledge graphs are typically represented as one node
-per entity and the relations as edge types between entities.
+entity-relation triples in the form $\langle e_1,\,r,\,e_2 \rangle$ where
+$e_1,e_2$ represent entities and $r$ represents the relation between them. The
+collection of triples is the knowledge base. Knowledge graphs can have very
+specialized information (e.g. representing biological processes) or very general
+information. They are typically represented as one node per entity and the
+relations as edge types between entities.
 
-Previous work in community detection has focused on very general types of
-graphs. This research is covered in Section \ref{Related Work}. Knowledge graphs
-are simply the graph representation of a set of entity-relation triples and
+Previous work in community detection has focused on general types of graphs.
+This research is covered in Section \ref{Related Work}. Knowledge graphs are
+simply the graph representation of a set of entity-relation triples and
 therefore have a specific inherent structure. We take advantage of this
 structure to create an algorithm that is faster than the general community
 detection algorithms. Specifically, we convert the knowledge graph to a
 bipartite representation. Details of the conversion are specified in Section
 \ref{Bipartite Representation}. A bipartite representation allows the algorithm
-to be fast while also benefiting from the very rigid structural rules of
-bipartite graphs.
+to be fast while also benefiting from the rigid structural rules of bipartite
+graphs.
 
 Community detection is a very important problem for knowledge graphs. A good
 community detection algorithm provides insight into the structural properties of
@@ -48,22 +73,21 @@ many of each type. If we frame it as a machine learning problem, then growing
 the knowledge base by adding new triples can be considered as an inference
 problem. Once we understand the breakdown of the existing graph, the entities
 and relation in the new triple can be easily categorized, providing information
-about the nodes beyond the simple textual information of the triple
-itself.Community detection on a knowledge graph also has applications to various
-other graph problems, such as question answering and social network analysis. By
+about the nodes beyond the simple textual information of the triple itself.
+Community detection on a knowledge graph also has applications to various other
+graph problems, such as question answering and social network analysis. By
 understanding the knowledge graph we can more easily answer queries about the
-knowledge graph. Similarly, most general network graphs can be converted into
-knowledge graphs. Thus a community detection algorithm can find patterns in
-social networks as well.
+graph. Similarly, most general network graphs can be converted into knowledge
+graphs. Thus a community detection algorithm can find patterns in social
+networks as well.
 
-Many knowledge graphs such as Freebase\cite{Freebase} have millions of triples.
+Knowledge graphs such as Freebase \cite{Bollacker2008} have millions of triples.
 Traditional community detection algorithms are $O(n^2 \log n)$ or $O(n^2)$,
 which is not computationally feasible for large datasets. The algorithm
 presented here is almost linear, which allows it to scale to large datasets. The
-speed of the algorithm allows it to generalize to any knowledge graph datset.The
-algorithm is also completely unsupervised, which is not the case for most
-knowledge graph
-algorithms\cite{Nickel2011}\cite{Bordes2013}\cite{Gao2015}\cite{Chang2014}.
+speed of the algorithm allows it to generalize to any knowledge graph dataset.
+The algorithm is also completely unsupervised, which is not the case for most
+knowledge graph algorithms \cite{Nickel2011, Bordes2013, Guo2015, Chang2014}.
 Since community detection is such a hard problem with no obvious answer, an
 unsupervised algorithm learns to detect any pattern in the graph. It can even
 detect patterns that the humans might not have been able to see. On the other
@@ -74,37 +98,38 @@ The structure of the paper is as follows. We first provide a quick overview on
 knowledge graphs. Then we review related work in the areas of community
 detection and knowledge graph analysis. Aftewards we present the bipartite
 representation of knowledge graphs and the mathematical details of the
-algorithm. Finally we present our results on the NELL\cite{Carlson2010}
+algorithm. Finally we present our results on the NELL \cite{Carlson2010}
 knowledge graph dataset.
 
 \section{Related Work}
 \label{Related Work}
 
 Community detection is a problem that has been studied quite extensively.
-Kernighan and Lin\cite{Kernighan1970} created one of the first algorithms.
-The algorithm we present here is loosely based on it. Their algorithm works by
+Kernighan and Lin \cite{Kernighan1970} created one of the first algorithms. The
+algorithm we present here is loosely based on it. Their algorithm works by
 partitioning the graph into two sections, choosing how to move nodes to maximize
 some benefit function, and then picking the state which has maximum benefit.
 
-Newman\cite{Newman2004} presents a comprehensive survey on the field of
+Newman \cite{Newman2004} presents a comprehensive survey on the field of
 community detection. He discusses the Kernighan-Lin algorithm as well as the
-Girvan-Newman algorithm\cite{Girvan2002}.
+Girvan-Newman algorithm \cite{Girvan2002}.
 
-Many algorithms have focused on the stochastic blockmodel\cite{Holland1983}.
-Karrer and Newman\cite{Karrer2011} presented a modified version of this algorithm
-which iteratively moves nodes from one community to another in order to maximize
-some objective function. This is the inspiration for the algorithm presented here.
-Larremore et al.\cite{Larremore2014} extend Karrer and Newman's method to a bipartite
-graph to obtain speedup. Their work serves as the basis for our algorithm, which
-converts the knowledge graph to a bipartite representation.
+Many algorithms have focused on the stochastic blockmodel \cite{Holland1983,
+Ball2011}. Karrer and Newman \cite{Karrer2011} presented a modified version of
+this algorithm which iteratively moves nodes from one community to another in
+order to maximize some objective function. This is the inspiration for the
+algorithm presented here. Larremore et al. \cite{Larremore2014} extend Karrer
+and Newman's method to a bipartite graph to obtain speedup. Their work serves as
+the basis for our algorithm, which converts the knowledge graph to a bipartite
+representation.
 
 Much research has been done with knowledge graphs as well, but none in the area
-of community detection on the original graph. Bordes et al.\cite{Bordes2013}
-provide a way to embed the knowledge graph using neural networks, and Gao et
-al.\cite{Gao2015} improve that model by enforcing Semantically Smooth Embedding.
-Nickel et al.\cite{Nickel2011} propose a model for embedding using tensor decomposition
-instead. Chang et al.\cite{Chang2014} improve the runtime of the Nickel model to
-make it more computationally feasible.
+of community detection on the original graph. Bordes et al. \cite{Bordes2013}
+provide a way to embed the knowledge graph using neural networks, and Guo et al.
+\cite{Guo2015} improve that model by enforcing Semantically Smooth Embedding.
+Nickel et al. \cite{Nickel2011} propose a model for embedding using tensor
+decomposition instead. Chang et al. \cite{Chang2014} improve the runtime of the
+Nickel model to make it more computationally feasible.
 
 \section{Knowledge Graph Overview}
 \label{Knowledge Graph Overview}
@@ -205,22 +230,27 @@ community, so it should be in a separate community from \textit{Tom Hanks} and
 
 Communities defined this way can be detected for one class independently of the
 other class, allowing for parallelization and therefore decreasing the running
-time of the program. As discussed in Section \ref{Related Work}, previous
+time of the program. As discussed in Section \ref{Related Work} previous
 community detection algorithms are $O(n^2\lg n)$ or $O(n^2)$, often because they
-have to perform a linear check over all nodes for each node they visit. However,
-the bipartite structure means that we can operate on the entity nodes and
-relation nodes independently, significantly lowering our runtime. The full
-analysis is discussed in Section \ref{Runtime Analysis}.
+perform a linear check over all nodes for each node they visit. The bipartite
+structure here means we operate on entity and relation nodes independently,
+significantly lowering our runtime. The full analysis is discussed in Section
+\ref{Runtime Analysis}.
 
 A third advantage of the bipartite representation is that in converting the
 relations to nodes, every edge in the resulting graph is untyped. Each edge can
 be processed in the same way. Additionally, the resulting adjacency tensor for
 the graph has only two dimensions, instead of the three-dimensional tensor used
-by Nickel et al.\cite{Nickel2011} and Chang et al.\cite{Chang2011}. As edges
+by Nickel et al. \cite{Nickel2011} and Chang et al. \cite{Chang2014}. As edges
 are untyped, there does not need to be a separate matrix for each type $k$.
 
 \section{Model}
 \label{Model}
+
+In this section we formalize the algorithm mathematics. We describe the metric
+used to evaluate how correct a particular community assignment is, walk through
+the algorithm step-by-step, and present an analysis of the algorithm running
+time.
 
 \subsection{Algorithm Overview}
 \label{Algorithm Overview}
@@ -235,12 +265,11 @@ nodes, and $N_e = |E|,\,N_r = |R|$. Note that $N_r$ is the number of triples
 in the set, since we have one relation node for every triple.
 % For convenience,
 % let $e$ be the number of entity nodes and $a$ the number of relation nodes.
-The
-input data also provides us with $O$ and $A$, the outbound and inbound adjacency
-matrices, respectively. Each of these is a binary $N_e\times N_r$ matrix, where
-$O_{ij} = 1$ if and only if edge there is a directed edge $e_{ij}$ from entity
-node $i$ to relation node $j$, and $I_{ij}$ is the same but for an edge from
-relation node $j$ to entity node $i$.
+The input data also provides us with $O$ and $A$, the outbound and inbound
+adjacency matrices, respectively. Each of these is a binary $N_e\times N_r$
+matrix, where $O_{ij} = 1$ if and only if edge there is a directed edge $e_{ij}$
+from entity node $i$ to relation node $j$, and $I_{ij}$ is the same but for an
+edge from relation node $j$ to entity node $i$.
 
 \begin{algorithm}[t!]
 \caption{Community Detection Algorithm}\label{alg: main_alg}
@@ -260,6 +289,8 @@ relation node $j$ to entity node $i$.
 
 \end{algorithmic}
 \end{algorithm}
+
+\newpage
 
 The algorithm is iterative. Each node is assigned a penalty score based on how
 its outbound/inbound edges differ from the other nodes in its community. In each
@@ -281,6 +312,8 @@ node in $r$. We can store these quantities in the $N_e\times |K_r|$ matrix
 $l_{outbound}$.
 
 $$l_{ir, outbound} = \sum_{j \in r} O_{ij}$$
+
+\newpage
 
 We can extend this analysis to inter-community links. Consider an entity
 community $c$. Let $L_{cr,outbound}$ be the number of outbound edges between $c$
@@ -327,8 +360,8 @@ is still high. In this case we randomly choose which new community to assign
 these nodes to. Due to the fact that improving each class of communities depends
 on improving the other class of communities, these local minima arise when the
 assignments are such that we reach an equilibrium point. Often they are a
-consequence of the random initializations. Therefore, as with many randomized
-algorithms, this algorithm is run many times with different initializations each
+consequence of the random initializations. Therefore, as with other randomized
+algorithms this algorithm is run many times with different initializations each
 time.
 
 \subsection{Similarity to other AI Algorithms}
@@ -343,19 +376,19 @@ to minimize the state penalty.
 Our approach is a greedy one, where in each iteration the algorithm tries to
 find the re-assignment of one entity node and one relation node such that
 penalty is minimized. If the algorithm hits a local minimum, it randomly chooses
-which communities to re-assign the nodes to. This approach is very similar to
-that of  WALKSAT, an algorithm for finding boolean satisfiability. WALKSAT
-greedily finds a variable assignment that satisfies the most unsatisfied
-clauses, but with some probability does a random assignment every iteration to
-avoid local minima.
+which communities to re-assign the nodes to. This is similar to WALKSAT, an
+algorithm for finding boolean satisfiability. WALKSAT greedily finds a variable
+assignment that satisfies the most unsatisfied clauses, but with some
+probability does a random assignment every iteration to avoid local minima.
 
 \subsection{Runtime Analysis}
 \label{Runtime Analysis}
 
-One goal of the algorithm is to be faster than the $O(n^2)$ runtime of the
-other community detection algorithms\cite{ohai}\cite{other}. As discussed in
-Section \ref{Bipartite Representation}, the bipartite structure of the graph
-allows us to run the algorithm for entities and relations simultaneously.
+One goal of the algorithm is to be faster than the $O(n^2)$ runtime of the other
+community detection algorithms \cite{Kernighan1970, Girvan2002, Larremore2014}.
+As discussed in Section \ref{Bipartite Representation}, the bipartite structure
+of the graph allows us to run the algorithm for entities and relations
+simultaneously.
 
 We can save computation by calculating the matrices $l_{outbound}, l_{inbound},
 L_{outbound}, L_{inbound}$ for entities and relations right after
@@ -371,11 +404,11 @@ calculating $L_{outbound}$ takes $O(N_e)$ time (and $O(N_r)$ time when
 calculating for the relation side). Our total precomputation is dominated by the
 $O(N_eN_r)$ term.
 
-In each iteration, calculating the penalty score of an entity node requires summing
-over every relation community, which is $O(|K_r|)$ time. Finding the penalty of
-a relation node takes $O(|K_e|)$ time. Finding the entity node with highest
-penalty therefore takes $O(N_e|K_r|)$ time, and finding the relation node with
-highest penalty is $O(N_r|K_e|)$.
+In each iteration, calculating the penalty score of an entity node requires
+summing over every relation community, which is $O(|K_r|)$ time. Finding the
+penalty of a relation node takes $O(|K_e|)$ time. Finding the entity node with
+highest penalty therefore takes $O(N_e|K_r|)$ time, and finding the relation
+node with highest penalty is $O(N_r|K_e|)$.
 
 Finding the optimal community to move to requires calculating the node's penalty
 in each community. This is $O(|K_e||K_r|)$ for both the entity node and relation
@@ -390,16 +423,19 @@ penalty. Therefore we spend $$O(N_e|K_r| + N_r|K_e|)$$ time per iteration.
 The total number of nodes is $N_e + N_r$, and $|K_e| << N_e,\,|K_r| << N_r$.
 The algorithm is not quite linear but almost linear per iteration, which means
 that it is a fast algorithm relative to other community detection algorithms.
-Lower runtime allows the algorithm to scale up to very large datasets.
+A lower runtime allows the algorithm to scale up to very large datasets.
 
 \section{Results}
 \label{Results}
 
-In this section we present our results on the NELL dataset\cite{Carlson2010}.
-The algorithm was implemented in Python using Numpy\cite{Jones2001} and Jupyter
-Notebook\cite{Perez2007}. We first take in the NELL input in triple format and
+In this section we present our results on the NELL dataset \cite{Carlson2010}.
+The algorithm was implemented in Python using Numpy \cite{Jones2001} and Jupyter
+Notebook \cite{Perez2007}. We first take in the NELL input in triple format and
 convert it to the bipartite representation. We then run the algorithm on the
 bipartite graph.
+
+\subsection{Implementation and Evaluation}
+\label{Implementation and Evaluation}
 
 The Never Ending Language Project (NELL) is a project at Carnegie Mellon which
 parses human knowledge from the Internet and generates entity-relation triples.
@@ -432,7 +468,8 @@ Community 1 and only events in Community 2. That the algorithm is able to find
 the optimal partition here indicates it could yield promising results on more
 complicated datsets.
 
-\begin{table}[b]
+\begin{table}[!tb]
+        \centering
     \begin{tabular}{|c|c|}
         \hline
         Community 1 & Community 2 \\ \hline
@@ -453,7 +490,7 @@ complicated datsets.
 The second dataset contains 3248 triples (298 distinct entities) in four broad
 areas. The first is the Events set used in the previous experiment. The second
 is a Language set, where all triples are of the form $\langle \text{language},
-\,\text{language\_of}, \,\text{place}$. In this set $e_1$ is a language and
+\,\text{language\_of}, \,\text{place} \rangle$. In this set $e_1$ is a language and
 $e_2$ is a place where it is spoken, either a country or a university. The third
 set is the Sports set, where $e_1$ is a particular sporting event and $e_2$ is
 either the team that played in it, or the final score. The fourth set is the
@@ -483,16 +520,17 @@ are 4 sources of data.
 
 Table~\ref{tab: totalE} shows the distribution of entity nodes in each entity
 community, along with the set from which each node originated. In the ideal
-assignment, each community would have nodes from only one set and all nodes
-from each set would be in the same community. Our results are not idea. In fact,
+assignment, each community would have nodes from only one set and all nodes from
+each set would be in the same community. Our results are not ideal. In fact,
 nodes from each set are distributed across all four communities, and within each
 community there are nodes from all four sets. Some sets have a better partition
-than others. For example, nodes from the Events set are mostly in Communities
-1 and 2, with very few in 3 and 4. Similarly, nodes from the People set are
+than others. For example, nodes from the Events set are mostly in Communities 1
+and 2, with very few in 3 and 4. Similarly, nodes from the People set are
 predominantly in Communities 1 and 3. However, for the most part the algorithm
 results are suboptimal.
 
 \begin{table}[]
+    \centering
     \begin{tabular}{|c||c|c|c|c|}
         \hline
         & Community 1 & Community 2 & Community 3 & Community 4 \\ \hline
@@ -501,17 +539,11 @@ results are suboptimal.
         People & 42 & 33 & 42 & 37 \\ \hline
         Sports & 22 & 26 & 21 & 15 \\ \hline
     \end{tabular}
-    \label{tab: totalE}
     \caption{Table of Entity Communities in the large dataset}
-\end{table}
+    \label{tab: totalE}
 
-Table~\ref{tab: totalR} shows the distribution of relation nodes in each
-relation community, along with the set from which each node originated. The
-results are about the same as with the entity communities. While the Events set
-is mostly in Communities 1 and 3, for the most part the communities do not
-match the optimal assignment.
+    \vspace{4ex}
 
-\begin{table}[]
     \begin{tabular}{|c||c|c|c|c|}
         \hline
         & Community 1 & Community 2 & Community 3 & Community 4 \\ \hline
@@ -520,9 +552,31 @@ match the optimal assignment.
         People & 441 & 399 & 395 & 413 \\ \hline
         Sports & 252 & 263 & 215 & 246 \\ \hline
     \end{tabular}
-    \label{tab: totalR}
     \caption{Table of Relation Communities in the large dataset}
+    \label{tab: totalR}
+
 \end{table}
+
+\newpage
+
+Table~\ref{tab: totalR} shows the distribution of relation nodes in each
+relation community, along with the set from which each node originated. The
+results are about the same as with the entity communities. While the Events set
+is mostly in Communities 1 and 3, for the most part the communities do not
+match the optimal assignment.
+
+% \begin{table}[]
+%     \begin{tabular}{|c||c|c|c|c|}
+%         \hline
+%         & Community 1 & Community 2 & Community 3 & Community 4 \\ \hline
+%         Language & 86 & 84 & 88 & 78 \\ \hline
+%         Events & 76 & 65 & 76  & 71 \\ \hline
+%         People & 441 & 399 & 395 & 413 \\ \hline
+%         Sports & 252 & 263 & 215 & 246 \\ \hline
+%     \end{tabular}
+%     \label{tab: totalR}
+%     \caption{Table of Relation Communities in the large dataset}
+% \end{table}
 
 \subsection{Discussion}
 \label{Discussion}
@@ -549,9 +603,11 @@ those two nodes in the same community. The algorithm takes a longer time to
 converge on dense graphs, however.
 
 The number of communities specified can also greatly affect the algorithm's
-accuracy. As discussed earlier, there is not necessarily a clear reason why
-any particular number should be specified. The most robust way of choosing is
-to run for many values and see which has more optimal results.
+accuracy. As discussed earlier, there is not necessarily a clear reason why any
+particular number should be specified. Theoretical approaches to answering this
+question for the stochastic block model were recently obtained by Abbe and
+Sandon \cite{Abbe2015-1, Abbe2015-2}. In our algorithm we simply run for many
+values and see which has more optimal results.
 
 \subsection{Future Improvements}
 \label{Future Improvements}
@@ -576,14 +632,14 @@ the total number of communities, to incentivize the algorithm to keep the
 total number small.
 
 The third improvement is to add supervision to the algorithm training process.
-An unsupervised algorithm is more easily generalizable, but adding some supervision
-could help increase the accuracy. The most logical way is to only perform community
-detection on the entity side, while specifying the relation types as an input
-to the algorithm. If the relation communities are already ideal, the algorithm
-should be able to detect entity communities. Most other knowledge graph algorithms
-\cite{Nickel2011}\cite{Gao2015}\cite{Chang2014} provide full labels as well as
-categorical information, so even just providing the relation communities would
-still be relatively unsupervised.
+An unsupervised algorithm is more easily generalizable, but adding some
+supervision could help increase the accuracy. The most logical way is to only
+perform community detection on the entity side, while specifying the relation
+types as an input to the algorithm. If the relation communities are already
+ideal, the algorithm should be able to detect entity communities. Most other
+knowledge graph algorithms \cite{Nickel2011, Guo2015, Chang2014} provide full
+labels as well as categorical information, so even just providing the relation
+communities would still be relatively unsupervised.
 
 \section{Conclusion}
 \label{sec:Conclusion}
@@ -600,8 +656,10 @@ of the algorithm.
 
 % \bstctlcite{bstctl:etal, bstctl:nodash, bstctl:simpurl}
 
-\bstctlcite{bstctl:etal, bstctl:nodash, bstctl:simpurl}
+% \bstctlcite{bstctl:etal, bstctl:nodash, bstctl:simpurl}
+\singlespacing
+\newpage
 \bibliographystyle{IEEEtranS}
-\bibliography{reference}
+\bibliography{pacm}
 
 \end{document}

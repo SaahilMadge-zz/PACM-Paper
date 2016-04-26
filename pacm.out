@@ -1,0 +1,13 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Related Work}{}% 2
+\BOOKMARK [1][-]{section.3}{Knowledge Graph Overview}{}% 3
+\BOOKMARK [1][-]{section.4}{Bipartite Representation}{}% 4
+\BOOKMARK [1][-]{section.5}{Model}{}% 5
+\BOOKMARK [2][-]{subsection.5.1}{Algorithm Overview}{section.5}% 6
+\BOOKMARK [2][-]{subsection.5.2}{Similarity to other AI Algorithms}{section.5}% 7
+\BOOKMARK [2][-]{subsection.5.3}{Runtime Analysis}{section.5}% 8
+\BOOKMARK [1][-]{section.6}{Results}{}% 9
+\BOOKMARK [2][-]{subsection.6.1}{Implementation and Evaluation}{section.6}% 10
+\BOOKMARK [2][-]{subsection.6.2}{Discussion}{section.6}% 11
+\BOOKMARK [2][-]{subsection.6.3}{Future Improvements}{section.6}% 12
+\BOOKMARK [1][-]{section.7}{Conclusion}{}% 13
